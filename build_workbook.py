@@ -537,7 +537,7 @@ c.alignment = Alignment(horizontal="center", vertical="center")
 ws_agent.row_dimensions[2].height = 18
 
 # Headers
-for col, label in [(1,"#"),(2,"AgentID"),(3,"Agent Name"),(4,"Office")]:
+for col, label in [(1,"#"),(2,"AgentID"),(3,"AgentName"),(4,"Office")]:
     c = ws_agent.cell(3, col, label)
     c.fill = fill(C_HEADER_ROW)
     c.font = Font(bold=True, size=11, color=C_WHITE, name="Calibri")
@@ -819,9 +819,9 @@ for i, t in enumerate(TRANSACTIONS):
     # Cols 26-36: Calculated
     # Col 26: List Agent Office  (XLOOKUP from tblAgent)
     row_ref = r
-    cal(26, f'=IFERROR(VLOOKUP(K{row_ref},tblAgent[#All],2,FALSE),"")', h="left")
+    cal(26, f'=IFERROR(VLOOKUP(K{row_ref},\'👤 Agents\'!$C$4:$D$200,2,FALSE),"")', h="left")
     # Col 27: Sell Agent Office
-    cal(27, f'=IFERROR(VLOOKUP(L{row_ref},tblAgent[#All],2,FALSE),"")', h="left")
+    cal(27, f'=IFERROR(VLOOKUP(L{row_ref},\'👤 Agents\'!$C$4:$D$200,2,FALSE),"")', h="left")
     # Col 28: HH Listing?
     cal(28, f'=IF(Z{row_ref}="HH","Yes","No")', h="center")
     # Col 29: HH Sale?
@@ -865,15 +865,17 @@ def add_dv(ws, formula, col_letter, start_row, end_row=200, error_msg="Invalid v
     ws.add_data_validation(dv)
 
 DS = DATA_START
-add_dv(ws_txn, '=tblLoanType[LoanType]', "I", DS)
-add_dv(ws_txn, '=tblAgent[AgentName]',   "K", DS)
-add_dv(ws_txn, '=tblAgent[AgentName]',   "L", DS)
-add_dv(ws_txn, '=tblEMHold[EMHold]',     "Q", DS)
-add_dv(ws_txn, '=tblYN[YN]',             "R", DS)
-add_dv(ws_txn, '=tblYN[YN]',             "S", DS)
-add_dv(ws_txn, '=tblHWPay[HWPay]',       "T", DS)
-add_dv(ws_txn, '=tblYN[YN]',             "U", DS)
-add_dv(ws_txn, '=tblTransStatus[TransStatus]', "Y", DS)
+# Inline lists for short dropdowns (no cross-sheet dependency = always works)
+add_dv(ws_txn, '"CONV,FHA,VA,CASH,New Const,Eq. Ln,Other"',            "I", DS)
+add_dv(ws_txn, '"HH,Title,CoBroke,Buyer,Seller,N/A,Other"',            "Q", DS)
+add_dv(ws_txn, '"Yes,No"',                                              "R", DS)
+add_dv(ws_txn, '"Yes,No"',                                              "S", DS)
+add_dv(ws_txn, '"Seller,Buyer,Split,Other,N/A"',                        "T", DS)
+add_dv(ws_txn, '"Yes,No"',                                              "U", DS)
+add_dv(ws_txn, '"Active,Closed,BOMB"',                                  "Y", DS)
+# Agents: named range (defined below after all sheets are built)
+add_dv(ws_txn, 'AgentNameList',                                         "K", DS)
+add_dv(ws_txn, 'AgentNameList',                                         "L", DS)
 
 # Date validation
 dv_date = DataValidation(type="date", operator="greaterThan",
@@ -1019,7 +1021,7 @@ ws_cl.row_dimensions[4].height = 48
 # Add data validation for all checklist cells
 dv_status = DataValidation(
     type="list",
-    formula1='=tblStatus[Status]',
+    formula1='"Not Started,In Progress,Waiting,Complete,N/A"',
     allow_blank=True,
     showErrorMessage=True,
     errorTitle="Invalid Status",
@@ -1239,41 +1241,42 @@ c.protection = openpyxl.styles.Protection(locked=True)
 ws_inp.row_dimensions[row+1].height = 90
 
 # Add dropdowns on Input form
-dv_loan_inp = DataValidation(type="list", formula1='=tblLoanType[LoanType]', allow_blank=True)
+# Inline lists — no cross-sheet dependency
+dv_loan_inp = DataValidation(type="list",
+    formula1='"CONV,FHA,VA,CASH,New Const,Eq. Ln,Other"', allow_blank=True)
 dv_loan_inp.sqref = "C11"
 ws_inp.add_data_validation(dv_loan_inp)
 
-dv_agent_inp_l = DataValidation(type="list", formula1='=tblAgent[AgentName]', allow_blank=True)
+# Agents — use workbook named range (defined after all sheets built)
+dv_agent_inp_l = DataValidation(type="list", formula1='AgentNameList', allow_blank=True)
 dv_agent_inp_l.sqref = "C14"
 ws_inp.add_data_validation(dv_agent_inp_l)
 
-dv_agent_inp_s = DataValidation(type="list", formula1='=tblAgent[AgentName]', allow_blank=True)
+dv_agent_inp_s = DataValidation(type="list", formula1='AgentNameList', allow_blank=True)
 dv_agent_inp_s.sqref = "F14"
 ws_inp.add_data_validation(dv_agent_inp_s)
 
-dv_yn_inp1 = DataValidation(type="list", formula1='=tblYN[YN]', allow_blank=True)
+dv_yn_inp1 = DataValidation(type="list", formula1='"Yes,No"', allow_blank=True)
 dv_yn_inp1.sqref = "C17"
 ws_inp.add_data_validation(dv_yn_inp1)
 
-dv_em_inp = DataValidation(type="list", formula1='=tblEMHold[EMHold]', allow_blank=True)
+dv_em_inp = DataValidation(type="list",
+    formula1='"HH,Title,CoBroke,Buyer,Seller,N/A,Other"', allow_blank=True)
 dv_em_inp.sqref = "F20"
 ws_inp.add_data_validation(dv_em_inp)
 
-dv_yn_inp2 = DataValidation(type="list", formula1='=tblYN[YN]', allow_blank=True)
+dv_yn_inp2 = DataValidation(type="list", formula1='"Yes,No"', allow_blank=True)
 dv_yn_inp2.sqref = "C21"
 ws_inp.add_data_validation(dv_yn_inp2)
 
-dv_hw_inp = DataValidation(type="list", formula1='=tblHWPay[HWPay]', allow_blank=True)
+dv_hw_inp = DataValidation(type="list",
+    formula1='"Seller,Buyer,Split,Other,N/A"', allow_blank=True)
 dv_hw_inp.sqref = "F21"
 ws_inp.add_data_validation(dv_hw_inp)
 
-dv_yn_inp3 = DataValidation(type="list", formula1='=tblYN[YN]', allow_blank=True)
+dv_yn_inp3 = DataValidation(type="list", formula1='"Yes,No"', allow_blank=True)
 dv_yn_inp3.sqref = "C22"
 ws_inp.add_data_validation(dv_yn_inp3)
-
-dv_yn_inp4 = DataValidation(type="list", formula1='=tblYN[YN]', allow_blank=True)
-dv_yn_inp4.sqref = "C17"
-ws_inp.add_data_validation(dv_yn_inp4)
 
 protect_sheet(ws_inp)
 print("Sheet 6 (Input Form) built.")
@@ -1526,6 +1529,20 @@ print("Sheet 7 (Dashboard) built.")
 # ─────────────────────────────────────────────────────────────────────────────
 # FINAL: TAB ORDER, SHEET COLORS, SAVE
 # ─────────────────────────────────────────────────────────────────────────────
+
+# ─────────────────────────────────────────────────────────────────────────────
+# WORKBOOK-LEVEL NAMED RANGES
+# These allow cross-sheet data validation to work reliably in all Excel versions
+# ─────────────────────────────────────────────────────────────────────────────
+from openpyxl.workbook.defined_name import DefinedName
+
+# Agent name list: rows 4 to (3 + number of agents), column C of Agents sheet
+agent_last_row = 3 + len(AGENTS)
+# The sheet name must be quoted with single quotes because it contains emoji
+wb.defined_names['AgentNameList'] = DefinedName(
+    'AgentNameList',
+    attr_text=f"'👤 Agents'!$C$4:$C${agent_last_row}"
+)
 
 # Set tab colors and order
 TAB_COLORS = {
